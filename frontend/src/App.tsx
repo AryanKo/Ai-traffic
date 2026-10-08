@@ -4,6 +4,7 @@ import { getHistory } from "./api";
 import { TopBar } from "./components/TopBar";
 import { JunctionView } from "./components/JunctionView";
 import { LaneCard } from "./components/LaneCard";
+import { DecisionPanel } from "./components/DecisionPanel";
 import type { Telemetry } from "./types";
 
 export default function App() {
@@ -32,6 +33,9 @@ export default function App() {
             <LaneCard name="Lane A" direction="from bottom" sensorType="HC-SR04" lane={telemetry?.a ?? null} history={history} nowMs={telemetry?.ms ?? 0} />
             <LaneCard name="Lane B" direction="from right" sensorType="VL53L0X" lane={telemetry?.b ?? null} history={history} nowMs={telemetry?.ms ?? 0} />
           </div>
+        </div>
+        <div className="space-y-4">
+          <DecisionPanel telemetry={telemetry} config={config} />
         </div>
       </main>
     </div>
