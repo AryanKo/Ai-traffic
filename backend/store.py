@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS events (
 );
 CREATE TABLE IF NOT EXISTS commands (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id INTEGER NOT NULL,
+    session_id INTEGER,
     host_ts REAL NOT NULL,
     cmd TEXT NOT NULL,
     result TEXT
