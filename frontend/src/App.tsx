@@ -1,8 +1,9 @@
 import { useLiveState } from "./useLiveState";
 import { TopBar } from "./components/TopBar";
+import { JunctionView } from "./components/JunctionView";
 
 export default function App() {
-  const { telemetry, link, isStale } = useLiveState();
+  const { telemetry, link, config, isStale } = useLiveState();
 
   return (
     <div className="min-h-screen bg-bg text-[#E6E9EE]">
@@ -12,8 +13,10 @@ export default function App() {
         deviceMs={telemetry?.ms ?? null}
         isStale={isStale}
       />
-      <main className="p-6 text-sm text-gray-400">
-        Dashboard panels are added in later tasks.
+      <main className="grid grid-cols-[2fr_1fr] gap-4 p-6">
+        <section className="rounded-2xl border border-border bg-panel p-4" style={{ height: 520 }}>
+          <JunctionView telemetry={telemetry} config={config} />
+        </section>
       </main>
     </div>
   );
