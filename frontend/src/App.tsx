@@ -5,6 +5,7 @@ import { TopBar } from "./components/TopBar";
 import { JunctionView } from "./components/JunctionView";
 import { LaneCard } from "./components/LaneCard";
 import { DecisionPanel } from "./components/DecisionPanel";
+import { LiveChart } from "./components/LiveChart";
 import type { Telemetry } from "./types";
 
 export default function App() {
@@ -12,7 +13,7 @@ export default function App() {
   const [history, setHistory] = useState<Telemetry[]>([]);
 
   useEffect(() => {
-    const id = setInterval(() => { getHistory(60).then(setHistory); }, 1000);
+    const id = setInterval(() => { getHistory(300).then(setHistory); }, 1000);
     return () => clearInterval(id);
   }, []);
 
@@ -33,6 +34,7 @@ export default function App() {
             <LaneCard name="Lane A" direction="from bottom" sensorType="HC-SR04" lane={telemetry?.a ?? null} history={history} nowMs={telemetry?.ms ?? 0} />
             <LaneCard name="Lane B" direction="from right" sensorType="VL53L0X" lane={telemetry?.b ?? null} history={history} nowMs={telemetry?.ms ?? 0} />
           </div>
+          <LiveChart history={history} />
         </div>
         <div className="space-y-4">
           <DecisionPanel telemetry={telemetry} config={config} />
