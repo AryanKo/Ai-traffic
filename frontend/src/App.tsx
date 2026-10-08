@@ -6,10 +6,11 @@ import { JunctionView } from "./components/JunctionView";
 import { LaneCard } from "./components/LaneCard";
 import { DecisionPanel } from "./components/DecisionPanel";
 import { LiveChart } from "./components/LiveChart";
+import { EventLog } from "./components/EventLog";
 import type { Telemetry } from "./types";
 
 export default function App() {
-  const { telemetry, link, config, isStale } = useLiveState();
+  const { telemetry, link, config, events, isStale } = useLiveState();
   const [history, setHistory] = useState<Telemetry[]>([]);
 
   useEffect(() => {
@@ -35,6 +36,7 @@ export default function App() {
             <LaneCard name="Lane B" direction="from right" sensorType="VL53L0X" lane={telemetry?.b ?? null} history={history} nowMs={telemetry?.ms ?? 0} />
           </div>
           <LiveChart history={history} />
+          <EventLog events={events} />
         </div>
         <div className="space-y-4">
           <DecisionPanel telemetry={telemetry} config={config} />
