@@ -59,10 +59,16 @@ def main() -> None:
     import uvicorn
 
     url = "http://127.0.0.1:8000"
-    print(f"
-Dashboard: {url}")
-    for ip in lan_addresses():
-        print(f"Phone remote (same Wi-Fi/hotspot): http://{ip}:8000/remote")
+    print()
+    print(f"Dashboard: {url}")
+    ips = lan_addresses()
+    if ips:
+        # The first address is the one the OS routes outward, i.e. the hotspot/Wi-Fi.
+        print(f"Phone remote (open on your phone): http://{ips[0]}:8000/remote")
+        for ip in ips[1:]:
+            print(f"  other network adapters, only if the one above fails: http://{ip}:8000/remote")
+    else:
+        print("Phone remote: no network found. Connect the laptop to the phone hotspot and restart.")
     print()
     open_browser_later(url)
     # 0.0.0.0 so the phone on the same hotspot can reach the remote page.

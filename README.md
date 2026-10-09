@@ -53,12 +53,13 @@ when installing), [Node.js 20+](https://nodejs.org/) and
    It prints something like:
    ```
    Dashboard: http://127.0.0.1:8000
-   Phone remote (same Wi-Fi/hotspot): http://192.168.43.17:8000/remote
+   Phone remote (open on your phone): http://172.20.10.4:8000/remote
+     other network adapters, only if the one above fails: http://192.168.56.1:8000/remote
    ```
    The dashboard opens in the laptop's browser on its own.
 4. **First run only:** Windows asks whether Python may use the network. Tick
    **Private networks** and click **Allow**.
-5. On the phone, open the **Phone remote** address exactly as printed (it starts with
+5. On the phone, open the **Phone remote (open on your phone)** address exactly as printed (it starts with
    `http://`, not `https://`).
 6. Wait until the badge in the top-right of the phone page reads **Connected**. Then tap:
    - **LED A** / **LED B**: turns that LED on or off (red glow = on).
@@ -71,7 +72,7 @@ To stop, press `Ctrl+C` in the terminal.
 | What you see | What to do |
 |---|---|
 | Phone page won't load | The laptop and phone must be on the same hotspot. Use the exact address `run.py` printed, starting with `http://`. If it still fails, open Windows Settings → Network & internet → Wi-Fi → your hotspot → set **Network profile type** to **Private**, then try again. |
-| Several "Phone remote" addresses printed | Use the one that starts with the same first three numbers as your phone's hotspot (often `192.168.x.x` or `172.20.10.x`). |
+| Phone page won't load at the first address | Try the "other network adapters" addresses one by one. Addresses like `192.168.56.x` belong to VirtualBox and never work from the phone. |
 | Phone badge says **No device** | The Arduino isn't connected. Check the USB cable and close the Arduino IDE / Serial Monitor. The app reconnects within 2 s, so there's no need to restart it. |
 | Dashboard says **No device** with the Arduino plugged in | Another program has the port (usually the Arduino Serial Monitor), or the board has an unusual USB chip. Name the port yourself: `python run.py --port COM5` (find the number in Arduino IDE → Tools → Port, or Windows Device Manager → Ports). |
 | Phone says **Connected** but the switches are greyed out and show "—" | The Arduino is still running the old firmware. Flash it again (setup step 1). |
