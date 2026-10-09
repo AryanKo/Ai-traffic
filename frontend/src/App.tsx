@@ -8,6 +8,7 @@ import { DecisionPanel } from "./components/DecisionPanel";
 import { LiveChart } from "./components/LiveChart";
 import { EventLog } from "./components/EventLog";
 import { Controls } from "./components/Controls";
+import { StatsPanel } from "./components/StatsPanel";
 import type { Telemetry } from "./types";
 
 export default function App() {
@@ -21,18 +22,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-bg text-[#E6E9EE]">
-      <TopBar
-        link={link}
-        mode={telemetry?.mode ?? null}
-        deviceMs={telemetry?.ms ?? null}
-        isStale={isStale}
-      />
+      <TopBar link={link} mode={telemetry?.mode ?? null} deviceMs={telemetry?.ms ?? null} isStale={isStale} />
       <main className="grid grid-cols-[2fr_1fr] gap-4 p-6">
         <div className="space-y-4">
-          <section className="rounded-2xl border border-border bg-panel p-4" style={{ height: 420 }}>
+          <section className={`rounded-2xl border border-border bg-panel p-4 ${isStale ? "opacity-50" : ""}`} style={{ height: 420 }}>
             <JunctionView telemetry={telemetry} config={config} />
           </section>
-          <div className="grid grid-cols-2 gap-4">
+          <div className={`grid grid-cols-2 gap-4 ${isStale ? "opacity-50" : ""}`}>
             <LaneCard name="Lane A" direction="from bottom" sensorType="HC-SR04" lane={telemetry?.a ?? null} history={history} nowMs={telemetry?.ms ?? 0} />
             <LaneCard name="Lane B" direction="from right" sensorType="VL53L0X" lane={telemetry?.b ?? null} history={history} nowMs={telemetry?.ms ?? 0} />
           </div>
@@ -42,6 +38,7 @@ export default function App() {
         <div className="space-y-4">
           <DecisionPanel telemetry={telemetry} config={config} />
           <Controls link={link} config={config} />
+          <StatsPanel />
         </div>
       </main>
     </div>
