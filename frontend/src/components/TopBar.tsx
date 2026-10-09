@@ -33,7 +33,7 @@ export function TopBar({ link, mode, sim, deviceMs, isStale }: {
         {sim ? (
           // The one place the dashboard states how it is being driven right now.
           <span className="rounded-md border border-clear bg-clear/20 px-3 py-1 font-sans font-semibold text-clear">
-            Manually controlled LEDs · sensors offline · traffic shown is a simulation
+            Smart Traffic System using LEDs to simulate traffic signals.
           </span>
         ) : (
           <span className="rounded px-2 py-1 bg-panel border border-border">{mode ?? "—"}</span>
