@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 CREATE TABLE IF NOT EXISTS telemetry (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id INTEGER NOT NULL,
+    session_id INTEGER,
     host_ts REAL NOT NULL,
     dev_ms INTEGER,
     g TEXT, ph TEXT, pt INTEGER, mode TEXT, why TEXT, emg TEXT,
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS telemetry (
 );
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id INTEGER NOT NULL,
+    session_id INTEGER,
     host_ts REAL NOT NULL,
     dev_ms INTEGER,
     ev TEXT NOT NULL,
@@ -91,11 +91,12 @@ class Store:
             a.get("raw"), a.get("d"), a.get("q"), a.get("n"), a.get("line"), a.get("w"), a.get("p"), a.get("ok"),
             b.get("raw"), b.get("d"), b.get("q"), b.get("n"), b.get("line"), b.get("w"), b.get("p"), b.get("ok"),
         )
-        self._pending_tel.append(row)
-        self.ring.append((now, tel))
-        cutoff = now - self.ring_seconds
-        while self.ring and self.ring[0][0] < cutoff:
-            self.ring.popleft()
+        with self._lock:
+            self._pending_tel.append(row)
+            self.ring.append((now, tel))
+            cutoff = now - self.ring_seconds
+            while self.ring and self.ring[0][0] < cutoff:
+                self.ring.popleft()
         self._maybe_flush()
 
     def add_event(self, evt: dict) -> None:
@@ -141,7 +142,8 @@ class Store:
 
     def history(self, seconds: int) -> list[dict]:
         cutoff = time.time() - seconds
-        return [tel for ts, tel in self.ring if ts >= cutoff]
+        with self._lock:
+            return [tel for ts, tel in self.ring if ts >= cutoff]
 
     def recent_events(self, limit: int) -> list[dict]:
         self.flush()

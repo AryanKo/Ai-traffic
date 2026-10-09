@@ -46,11 +46,15 @@ class SerialLink:
     def stop(self) -> None:
         self._stop.set()
 
+    def _mark_disconnected(self) -> None:
+        self.connected = False
+        self.boot_at = None
+
     def _run(self) -> None:
         while not self._stop.is_set():
             port = self._port_override or find_port()
             if not port:
-                self.connected = False
+                self._mark_disconnected()
                 time.sleep(RECONNECT_DELAY_S)
                 continue
             try:
@@ -60,7 +64,7 @@ class SerialLink:
                 self.boot_at = None
                 self._read_loop()
             except (serial.SerialException, OSError):
-                self.connected = False
+                self._mark_disconnected()
                 time.sleep(RECONNECT_DELAY_S)
 
     def _read_loop(self) -> None:
@@ -77,7 +81,7 @@ class SerialLink:
                 buf = b""
             else:
                 buf += chunk
-        self.connected = False
+        self._mark_disconnected()
         try:
             self._ser.close()
         except Exception:
@@ -106,20 +110,27 @@ class SerialLink:
             self._cal_result = obj
             self._cal_waiter.set()
 
-        self._on_message(obj)
+        try:
+            self._on_message(obj)
+        except Exception:
+            pass
 
     def pps(self) -> float:
         cutoff = time.time() - ARRIVAL_WINDOW_S
-        self._arrivals = [a for a in self._arrivals if a >= cutoff]
-        return len(self._arrivals) / ARRIVAL_WINDOW_S
+        return sum(1 for a in self._arrivals if a >= cutoff) / ARRIVAL_WINDOW_S
 
     def send_command(self, cmd: str, timeout: float = 2.0) -> dict:
         if not self.connected or not self._ser:
             return {"ok": False, "error": "not_connected"}
-        ack_event = threading.Event()
-        cal_event = None
+        if self.boot_at is None:
+            return {"ok": False, "error": "not_booted"}
+        # The firmware acks CAR:<mm> with the bare command name "CAR", so the
+        # waiter must be keyed on that, not on the full command text.
+        ack_key = "CAR" if cmd.startswith("CAR:") else cmd
         with self._write_lock:
-            self._ack_waiters[cmd] = ack_event
+            ack_event = threading.Event()
+            self._ack_waiters[ack_key] = ack_event
+            cal_event = None
             if cmd == "CAL":
                 cal_event = threading.Event()
                 self._cal_waiter = cal_event
@@ -127,15 +138,15 @@ class SerialLink:
             try:
                 self._ser.write((cmd + "\n").encode("ascii"))
             except (serial.SerialException, OSError):
-                self._ack_waiters.pop(cmd, None)
+                self._ack_waiters.pop(ack_key, None)
                 return {"ok": False, "error": "write_failed"}
-        got_ack = ack_event.wait(timeout)
-        self._ack_waiters.pop(cmd, None)
-        if not got_ack:
-            return {"ok": False, "error": "timeout"}
-        result = {"ok": True, "ack": self._ack_results.pop(cmd, None)}
-        if cmd == "CAL" and cal_event is not None:
-            cal_event.wait(4.0)
-            self._cal_waiter = None
-            result["cal"] = self._cal_result
-        return result
+            got_ack = ack_event.wait(timeout)
+            self._ack_waiters.pop(ack_key, None)
+            if not got_ack:
+                return {"ok": False, "error": "timeout"}
+            result = {"ok": True, "ack": self._ack_results.pop(ack_key, None)}
+            if cmd == "CAL" and cal_event is not None:
+                cal_event.wait(4.0)
+                self._cal_waiter = None
+                result["cal"] = self._cal_result
+            return result

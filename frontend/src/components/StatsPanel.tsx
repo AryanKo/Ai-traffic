@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { getStats } from "../api";
+import { fmtMs, fmtPct } from "../statsFormat";
 
 interface Stats {
   switches_total: number;
   switches_by_reason: Record<string, number>;
-  avg_green_ms: Record<string, number>;
-  avg_wait_ms: Record<string, number>;
-  max_wait_ms: Record<string, number>;
-  green_share: Record<string, number>;
+  avg_green_ms: Record<string, number | null>;
+  avg_wait_ms: Record<string, number | null>;
+  max_wait_ms: Record<string, number | null>;
+  green_share: Record<string, number | null>;
   emergencies: number;
   faults: number;
   session_uptime_s: number;
@@ -44,10 +45,10 @@ export function StatsPanel() {
         <div>emergencies: {stats.emergencies}</div>
         <div>faults: {stats.faults}</div>
         <div>uptime: {stats.session_uptime_s.toFixed(0)}s</div>
-        <div>avg green A/B: {stats.avg_green_ms.A.toFixed(0)} / {stats.avg_green_ms.B.toFixed(0)} ms</div>
-        <div>green share A/B: {(stats.green_share.A * 100).toFixed(0)}% / {(stats.green_share.B * 100).toFixed(0)}%</div>
-        <div>avg wait A/B: {stats.avg_wait_ms.A.toFixed(0)} / {stats.avg_wait_ms.B.toFixed(0)} ms</div>
-        <div>max wait A/B: {stats.max_wait_ms.A.toFixed(0)} / {stats.max_wait_ms.B.toFixed(0)} ms</div>
+        <div>avg green A/B: {fmtMs(stats.avg_green_ms.A)} / {fmtMs(stats.avg_green_ms.B)}</div>
+        <div>green share A/B: {fmtPct(stats.green_share.A)} / {fmtPct(stats.green_share.B)}</div>
+        <div>avg wait A/B: {fmtMs(stats.avg_wait_ms.A)} / {fmtMs(stats.avg_wait_ms.B)}</div>
+        <div>max wait A/B: {fmtMs(stats.max_wait_ms.A)} / {fmtMs(stats.max_wait_ms.B)}</div>
       </div>
       <div className="mt-2 text-xs text-gray-400">
         switches by reason: {Object.entries(stats.switches_by_reason).map(([k, v]) => `${k}:${v}`).join(", ") || "none yet"}

@@ -69,6 +69,17 @@ def test_history_excludes_entries_older_than_window():
     assert len(hist) == 1
 
 
+def test_add_event_and_add_telemetry_without_session_do_not_raise():
+    s = make_store()
+    s.add_event(EVT)
+    s.add_telemetry(TEL)
+    s.flush()
+    row = s.conn.execute("SELECT session_id FROM events WHERE ev='BOOT'").fetchone()
+    assert row == (None,)
+    row = s.conn.execute("SELECT session_id FROM telemetry").fetchone()
+    assert row == (None,)
+
+
 def test_add_command_is_persisted():
     s = make_store()
     s.start_session("COM5", "{}")

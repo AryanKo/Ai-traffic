@@ -28,14 +28,16 @@ def add_tel(store, lane_w_a=0, lane_w_b=0, q_a=0, q_b=0, n_a=0, n_b=0):
     store.flush()
 
 
-def test_empty_session_has_zeroed_stats_no_crash():
+def test_empty_session_has_no_fabricated_averages_and_does_not_crash():
     s = make_store()
     s.start_session("COM5", "{}")
     stats = compute_stats(s.conn, s.session_id)
     assert stats["switches_total"] == 0
-    assert stats["avg_green_ms"] == {"A": 0, "B": 0}
-    assert stats["green_share"] == {"A": 0, "B": 0}
-    assert stats["avg_wait_ms"] == {"A": 0, "B": 0}
+    assert stats["avg_green_ms"] == {"A": None, "B": None}
+    assert stats["longest_green_ms"] == {"A": None, "B": None}
+    assert stats["green_share"] == {"A": None, "B": None}
+    assert stats["avg_wait_ms"] == {"A": None, "B": None}
+    assert stats["max_wait_ms"] == {"A": None, "B": None}
 
 
 def test_counts_switches_by_reason():

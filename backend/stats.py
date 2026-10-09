@@ -25,10 +25,10 @@ def compute_stats(conn: sqlite3.Connection, session_id: int) -> dict:
         green_ms_by_lane[d["from"]].append(d["greenMs"])
 
     avg_green_ms = {lane: _avg(v) for lane, v in green_ms_by_lane.items()}
-    longest_green_ms = {lane: (max(v) if v else 0) for lane, v in green_ms_by_lane.items()}
+    longest_green_ms = {lane: (max(v) if v else None) for lane, v in green_ms_by_lane.items()}
     total_green = sum(sum(v) for v in green_ms_by_lane.values())
     green_share = {
-        lane: (sum(v) / total_green if total_green else 0)
+        lane: (sum(v) / total_green if total_green else None)
         for lane, v in green_ms_by_lane.items()
     }
 
@@ -43,7 +43,7 @@ def compute_stats(conn: sqlite3.Connection, session_id: int) -> dict:
         if row and row[0] is not None:
             wait_by_lane[lane].append(row[0])
     avg_wait_ms = {lane: _avg(v) for lane, v in wait_by_lane.items()}
-    max_wait_ms = {lane: (max(v) if v else 0) for lane, v in wait_by_lane.items()}
+    max_wait_ms = {lane: (max(v) if v else None) for lane, v in wait_by_lane.items()}
 
     peak_queue_mm, peak_queue_cars = {}, {}
     for lane, qcol, ncol in (("A", "a_q", "a_n"), ("B", "b_q", "b_n")):
@@ -75,5 +75,5 @@ def compute_stats(conn: sqlite3.Connection, session_id: int) -> dict:
     }
 
 
-def _avg(values: list[float]) -> float:
-    return sum(values) / len(values) if values else 0
+def _avg(values: list[float]) -> float | None:
+    return sum(values) / len(values) if values else None

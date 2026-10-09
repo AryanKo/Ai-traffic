@@ -7,7 +7,7 @@ export function Controls({ link, config }: { link: LinkStatus | null; config: Co
   const [calResult, setCalResult] = useState<string | null>(null);
   const [carLenInput, setCarLenInput] = useState<string>(config ? String(config.carMm) : "");
   const [lastAck, setLastAck] = useState<string | null>(null);
-  const disabled = !link || !link.connected;
+  const disabled = !link || !link.connected || !link.booted;
 
   async function sendEmergency(cmd: string, label: string) {
     if (!window.confirm(`Send "${label}"?`)) return;

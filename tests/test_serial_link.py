@@ -1,5 +1,6 @@
 import os
 import sys
+import threading
 import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
@@ -67,7 +68,65 @@ def test_pps_counts_only_last_5_seconds():
     assert link.pps() == 2 / 5.0
 
 
+def test_handle_line_does_not_crash_when_on_message_raises():
+    def bad_callback(obj):
+        raise ValueError("boom")
+
+    link = SerialLink(on_message=bad_callback)
+    link._handle_line(TEL_LINE)  # must not raise
+    assert link.last_packet_at is not None
+    link._handle_line(TEL_LINE)  # a second message must still be processed
+    assert link.parse_errors == 0
+
+
 def test_send_command_without_connection_returns_not_connected():
     link = SerialLink(on_message=lambda obj: None)
     result = link.send_command("PING")
     assert result == {"ok": False, "error": "not_connected"}
+
+
+class FakeSerial:
+    def __init__(self):
+        self.written = []
+
+    def write(self, data):
+        self.written.append(data)
+
+
+def test_send_command_before_boot_returns_not_booted():
+    link = SerialLink(on_message=lambda obj: None)
+    link.connected = True
+    link._ser = FakeSerial()
+    result = link.send_command("PING")
+    assert result == {"ok": False, "error": "not_booted"}
+
+
+def test_mark_disconnected_clears_connected_and_boot_at():
+    link = SerialLink(on_message=lambda obj: None)
+    link.connected = True
+    link.boot_at = 123.0
+    link._mark_disconnected()
+    assert link.connected is False
+    assert link.boot_at is None
+
+
+def test_send_command_car_with_value_matches_firmwares_bare_car_ack():
+    link = SerialLink(on_message=lambda obj: None)
+    link.connected = True
+    link.boot_at = time.time()
+    link._ser = FakeSerial()
+
+    result_holder = {}
+
+    def sender():
+        result_holder["result"] = link.send_command("CAR:120", timeout=2.0)
+
+    t = threading.Thread(target=sender)
+    t.start()
+    # Give send_command a moment to register its waiter before the ack arrives.
+    time.sleep(0.1)
+    link._handle_line('{"type":"ack","ms":1,"cmd":"CAR"}')
+    t.join(timeout=3.0)
+
+    assert result_holder["result"]["ok"] is True
+    assert link._ser.written == [b"CAR:120\n"]

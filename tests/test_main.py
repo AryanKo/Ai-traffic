@@ -17,6 +17,7 @@ class FakeLink:
         self.last_packet_at = None
         self.boot_at = None
         self.sent = []
+        self._on_message = None
 
     def pps(self):
         return 0.0
@@ -80,3 +81,23 @@ def test_stats_endpoint_404_before_any_session():
     client = TestClient(app)
     r = client.get("/api/stats")
     assert r.status_code == 404
+
+
+def test_boot_event_starts_session_before_being_stored():
+    app, link, store = make_app()
+    boot = {"type": "evt", "ms": 1, "ev": "BOOT", "lineA": 0, "lineB": 0}
+    link._on_message(boot)
+    assert store.session_id is not None
+    store.flush()
+    row = store.conn.execute(
+        "SELECT session_id FROM events WHERE ev='BOOT'"
+    ).fetchone()
+    assert row == (store.session_id,)
+
+
+def test_event_before_boot_does_not_crash():
+    app, link, store = make_app()
+    err = {"type": "evt", "ms": 1, "ev": "ERR", "msg": "TOF_INIT_FAILED"}
+    link._on_message(err)
+    store.flush()
+    assert store.session_id is None

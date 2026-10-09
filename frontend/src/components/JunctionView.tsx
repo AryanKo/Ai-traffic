@@ -1,6 +1,6 @@
 import { isNoQueue } from "../types";
 import type { Config, Telemetry } from "../types";
-import { queueFraction } from "../junctionGeometry";
+import { queueFraction, signalHeadCenter } from "../junctionGeometry";
 
 const W = 480;
 const H = 480;
@@ -27,6 +27,8 @@ export function JunctionView({ telemetry, config: _config }: { telemetry: Teleme
   const goB = telemetry.g === "B";
   const allRed = telemetry.g === "X";
   const emergency = telemetry.mode === "EMERGENCY";
+  const headA = signalHeadCenter("A", W / 2, H / 2);
+  const headB = signalHeadCenter("B", W / 2, H / 2);
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className={`h-full w-full ${emergency ? "outline outline-2 outline-clear" : ""}`}>
@@ -44,7 +46,7 @@ export function JunctionView({ telemetry, config: _config }: { telemetry: Teleme
         />
       )}
       {a.ok === 0 && <rect x={W / 2 - 24} y={H / 2} width={48} height={laneLenPx} fill="url(#hatch)" />}
-      <SignalHead go={goA} cx={W / 2} cy={H / 2} />
+      <SignalHead go={goA} cx={headA.x} cy={headA.y} />
       <text x={W / 2} y={H / 2 - 16} fontSize="11" fill="#9CA3AF" textAnchor="middle">
         {isNoQueue(a.raw, a.q) ? "No queue" : `${(a.q / 10).toFixed(0)} cm`}
       </text>
@@ -63,7 +65,7 @@ export function JunctionView({ telemetry, config: _config }: { telemetry: Teleme
         />
       )}
       {b.ok === 0 && <rect x={W / 2} y={H / 2 - 24} width={laneLenPx} height={48} fill="url(#hatch)" />}
-      <SignalHead go={goB} cx={W / 2} cy={H / 2} />
+      <SignalHead go={goB} cx={headB.x} cy={headB.y} />
       <text x={W / 2 + laneLenPx / 2} y={H / 2 - 32} fontSize="11" fill="#9CA3AF" textAnchor="middle">
         {isNoQueue(b.raw, b.q) ? "No queue" : `${(b.q / 10).toFixed(0)} cm`}
       </text>

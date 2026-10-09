@@ -46,12 +46,12 @@ def create_app(link, store: Store) -> FastAPI:
             store.add_telemetry(obj)
             broadcast("tel", obj)
         elif obj["type"] == "evt":
-            store.add_event(obj)
             if obj.get("ev") == "BOOT":
                 state["latest_cfg"] = obj
                 store.start_session(link.port_name, json.dumps(obj))
             elif obj.get("ev") == "CFG":
                 state["latest_cfg"] = obj
+            store.add_event(obj)
             broadcast("evt", obj)
         elif obj["type"] == "ack":
             broadcast("ack", obj)
@@ -95,7 +95,7 @@ def create_app(link, store: Store) -> FastAPI:
         cmd = body.get("cmd", "")
         if not is_allowed_command(cmd):
             return JSONResponse({"ok": False, "error": "not_allowed"}, status_code=400)
-        result = link.send_command(cmd)
+        result = await asyncio.to_thread(link.send_command, cmd)
         store.add_command(cmd, json.dumps(result))
         return result
 
