@@ -9,7 +9,7 @@ function SignalHead({ go, cx, cy }: { go: boolean; cx: number; cy: number }) {
   return <circle cx={cx} cy={cy} r={10} fill={go ? "#22C55E" : "#EF4444"} />;
 }
 
-export function JunctionView({ telemetry, config }: { telemetry: Telemetry | null; config: Config | null }) {
+export function JunctionView({ telemetry, config: _config }: { telemetry: Telemetry | null; config: Config | null }) {
   if (!telemetry) {
     return (
       <div className="flex h-full items-center justify-center text-gray-500">

@@ -7,6 +7,7 @@ import { LaneCard } from "./components/LaneCard";
 import { DecisionPanel } from "./components/DecisionPanel";
 import { LiveChart } from "./components/LiveChart";
 import { EventLog } from "./components/EventLog";
+import { Controls } from "./components/Controls";
 import type { Telemetry } from "./types";
 
 export default function App() {
@@ -40,6 +41,7 @@ export default function App() {
         </div>
         <div className="space-y-4">
           <DecisionPanel telemetry={telemetry} config={config} />
+          <Controls link={link} config={config} />
         </div>
       </main>
     </div>
