@@ -18,6 +18,9 @@ export function evaluateRules(tel: Telemetry, config: Config): RuleResult[] {
   if (tel.g === "X") {
     return [{ id: "all_red", label: "All red clearance in progress", pass: true, detail: "Rules apply once a lane has green" }];
   }
+  if (tel.g === "AB") {
+    return [{ id: "both_go", label: "Both lanes have green", pass: true, detail: `A ${tel.a.n} cars, B ${tel.b.n} cars` }];
+  }
   const g = green(tel);
   const o = other(tel);
   const minGreenOk = tel.pt >= config.minG;

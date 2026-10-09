@@ -15,4 +15,12 @@ describe("describeEvent", () => {
   it("falls back to the raw event name for unmapped events", () => {
     expect(describeEvent({ type: "evt", ms: 0, ev: "RECOVER", lane: "A" })).toBe("Lane A sensor recovered");
   });
+  it("describes a SWITCH to all red", () => {
+    const text = describeEvent({ type: "evt", ms: 0, ev: "SWITCH", from: "A", to: "X", why: "GAP_OUT", greenMs: 4000, nA: 0, nB: 0, pA: 0, pB: 0 });
+    expect(text).toBe("Switched A to all red after 4.0 s: GAP_OUT (A 0.0, B 0.0)");
+  });
+  it("describes EMG_OFF reasons in plain words", () => {
+    expect(describeEvent({ type: "evt", ms: 0, ev: "EMG_OFF", lane: "A", why: "MANUAL" })).toBe("Emergency priority ended for lane A (cancelled from the dashboard)");
+    expect(describeEvent({ type: "evt", ms: 0, ev: "EMG_OFF", lane: "B", why: "TIMEOUT" })).toBe("Emergency priority ended for lane B (timed out)");
+  });
 });

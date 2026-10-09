@@ -23,8 +23,8 @@ export function JunctionView({ telemetry, config: _config }: { telemetry: Teleme
   const laneLenPx = 180;
   const fracA = queueFraction(a.line, a.q);
   const fracB = queueFraction(b.line, b.q);
-  const goA = telemetry.g === "A";
-  const goB = telemetry.g === "B";
+  const goA = telemetry.g === "A" || telemetry.g === "AB";
+  const goB = telemetry.g === "B" || telemetry.g === "AB";
   const allRed = telemetry.g === "X";
   const emergency = telemetry.mode === "EMERGENCY";
   const headA = signalHeadCenter("A", W / 2, H / 2);

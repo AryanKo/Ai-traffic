@@ -2,23 +2,28 @@
 import asyncio
 import json
 import os
+import threading
 import time
 from pathlib import Path
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from protocol import is_allowed_command
 from serial_link import SerialLink
 from stats import compute_stats
 from store import Store
+from traffic_sim import TrafficSim
+
+REMOTE_PAGE = Path(__file__).resolve().parent / "remote.html"
 
 
-def create_app(link, store: Store) -> FastAPI:
+def create_app(link, store: Store, sim: TrafficSim | None = None) -> FastAPI:
     app = FastAPI()
     ws_clients: set[WebSocket] = set()
     state = {"latest_tel": None, "latest_cfg": None, "loop": None}
+    sim = sim or TrafficSim()
 
     def status_payload() -> dict:
         age = None
@@ -40,21 +45,44 @@ def create_app(link, store: Store) -> FastAPI:
         for ws in list(ws_clients):
             asyncio.run_coroutine_threadsafe(_safe_send(ws, kind, data, ws_clients), loop)
 
+    def on_event(obj: dict) -> None:
+        store.add_event(obj)
+        broadcast("evt", obj)
+
     def on_message(obj: dict) -> None:
         if obj["type"] == "tel":
+            if obj.get("mode") == "DIRECT":
+                obj, sim_events = sim.step(obj)
+                for ev in sim_events:
+                    on_event(ev)
             state["latest_tel"] = obj
             store.add_telemetry(obj)
             broadcast("tel", obj)
         elif obj["type"] == "evt":
+            if obj.get("ev") in ("BOOT", "CFG") and obj.get("direct") == 1:
+                obj = sim.config(obj)
             if obj.get("ev") == "BOOT":
+                before_reset = state["latest_tel"]
                 state["latest_cfg"] = obj
                 store.start_session(link.port_name, json.dumps(obj))
+                if obj.get("direct") == 1:
+                    sim.reset()
+                    restore_leds(before_reset)
             elif obj.get("ev") == "CFG":
                 state["latest_cfg"] = obj
-            store.add_event(obj)
-            broadcast("evt", obj)
+            on_event(obj)
         elif obj["type"] == "ack":
             broadcast("ack", obj)
+
+    def restore_leds(last_tel: dict | None) -> None:
+        # A board reset brings it back with both LEDs on. Put back the LED state
+        # it last reported. This runs on the serial reader thread, which must stay
+        # free to read the ack, so the command is sent from another thread.
+        if not last_tel or "la" not in last_tel:
+            return
+        cmd = f"L:{last_tel['la']}{last_tel['lb']}"
+        if cmd != "L:11":
+            threading.Thread(target=link.send_command, args=(cmd,), daemon=True).start()
 
     if hasattr(link, "_on_message"):
         link._on_message = on_message
@@ -98,6 +126,10 @@ def create_app(link, store: Store) -> FastAPI:
         result = await asyncio.to_thread(link.send_command, cmd)
         store.add_command(cmd, json.dumps(result))
         return result
+
+    @app.get("/remote")
+    def remote_page():
+        return FileResponse(REMOTE_PAGE)
 
     @app.websocket("/ws")
     async def ws_endpoint(ws: WebSocket):

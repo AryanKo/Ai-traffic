@@ -9,6 +9,12 @@ const WHY_TEXT: Record<string, string> = {
   EMERGENCY: "Emergency priority was requested",
 };
 
+function goText(g: Telemetry["g"]): string {
+  if (g === "X") return "none (all red)";
+  if (g === "AB") return "Lanes A and B";
+  return `Lane ${g}`;
+}
+
 export function DecisionPanel({ telemetry, config }: { telemetry: Telemetry | null; config: Config | null }) {
   if (!telemetry || !config) {
     return <div className="rounded-2xl border border-border bg-panel p-4 text-gray-500">No device connected</div>;
@@ -20,7 +26,7 @@ export function DecisionPanel({ telemetry, config }: { telemetry: Telemetry | nu
   return (
     <div className="rounded-2xl border border-border bg-panel p-4">
       <div className="font-semibold">Decision</div>
-      <div className="mt-1 text-sm">GO: Lane {telemetry.g === "X" ? "none (all red)" : telemetry.g} — green for {(telemetry.pt / 1000).toFixed(1)}s</div>
+      <div className="mt-1 text-sm">GO: {goText(telemetry.g)} — green for {(telemetry.pt / 1000).toFixed(1)}s</div>
       <div className="relative mt-2 h-2 rounded bg-black/40">
         <div className="absolute h-2 rounded bg-accent" style={{ width: `${progressPct}%` }} />
         <div className="absolute top-0 h-2 w-px bg-white/60" style={{ left: `${minGreenPct}%` }} />

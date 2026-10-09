@@ -8,7 +8,9 @@ from serial.tools import list_ports
 
 from protocol import parse_line
 
-ALLOWED_VIDS = {0x2341, 0x2A03, 0x1A86}
+# USB vendor IDs of Uno boards and the USB-serial chips clones use:
+# Arduino LLC, Arduino SRL, WCH CH340, Silicon Labs CP210x, FTDI.
+ALLOWED_VIDS = {0x2341, 0x2A03, 0x1A86, 0x10C4, 0x0403}
 RECONNECT_DELAY_S = 2.0
 ARRIVAL_WINDOW_S = 5.0
 
@@ -124,9 +126,9 @@ class SerialLink:
             return {"ok": False, "error": "not_connected"}
         if self.boot_at is None:
             return {"ok": False, "error": "not_booted"}
-        # The firmware acks CAR:<mm> with the bare command name "CAR", so the
-        # waiter must be keyed on that, not on the full command text.
-        ack_key = "CAR" if cmd.startswith("CAR:") else cmd
+        # The firmware acks CAR:<mm> and L:<a><b> with the bare command name
+        # ("CAR", "L"), so the waiter must be keyed on that, not the full text.
+        ack_key = cmd.split(":", 1)[0] if cmd.startswith(("CAR:", "L:")) else cmd
         with self._write_lock:
             ack_event = threading.Event()
             self._ack_waiters[ack_key] = ack_event

@@ -45,6 +45,14 @@
     CAR:<mm>    -> sets the length of one car plus its gap, in mm (10 to 500)
     E:A / E:B   -> emergency priority for lane A or lane B
     E:OFF       -> cancel emergency
+    L:<a><b>    -> direct LED control, each digit 1 = LED on, 0 = LED off
+                   (L:10 = LED A on, LED B off). Switches to direct mode.
+
+  Direct mode (BOOT_DIRECT = true):
+    The board starts with the LEDs under direct L:<a><b> control. It does not
+    read the sensors or run the automatic decision logic. E:A / E:B still
+    work: they turn the priority lane's LED off and the other LED on.
+    Set BOOT_DIRECT to false to boot into the automatic controller.
 */
 
 #include <Wire.h>
@@ -74,6 +82,12 @@ const uint8_t  FAULT_DEMAND    = 3;    // cars assumed for a faulty lane so it s
 // A reading of NO_TARGET_MM means "the sensor sees nothing in range".
 // That is normal: it means there is no car in the lane.
 const int16_t  NO_TARGET_MM    = 30000;
+
+// ---------------- Direct LED control ----------------
+const bool BOOT_DIRECT = true;
+bool direct = BOOT_DIRECT;
+bool ledOnA = true;   // LED on = red; both on at boot is the safe default
+bool ledOnB = true;
 
 // ---------------- Saved settings ----------------
 const uint16_t EE_MAGIC = 0xC0E1;
@@ -140,6 +154,17 @@ void setLights(char g) {
   digitalWrite(PIN_RED_B, (g == 'B') ? LOW : HIGH);
 }
 
+void applyDirectLeds() {
+  digitalWrite(PIN_RED_A, ledOnA ? HIGH : LOW);
+  digitalWrite(PIN_RED_B, ledOnB ? HIGH : LOW);
+}
+
+// Puts the LEDs back to what the current mode says they should be.
+void restoreLights() {
+  if (direct) applyDirectLeds();
+  else        setLights(phase == PH_GREEN ? greenLane : 'X');
+}
+
 // ================= JSON output helpers =================
 
 void evtStart(const __FlashStringHelper* name) {
@@ -198,6 +223,7 @@ void emitConfig(const __FlashStringHelper* name, const char* calSource) {
   kvFloat(F("margin"), SWITCH_MARGIN);
   kvLong(F("faultDemand"), FAULT_DEMAND);
   kvLong(F("tof"), tofReady ? 1 : 0);
+  kvLong(F("direct"), direct ? 1 : 0);
   if (calSource) kvStr(F("cal"), calSource);
   evtEnd();
 }
@@ -404,6 +430,12 @@ void startEmergency(char lane, unsigned long now) {
   emgLane = lane;
   emgStart = now;
   evtStart(F("EMG_ON")); kvChar(F("lane"), lane); evtEnd();
+  if (direct) {                 // priority lane's LED off (go), other LED on (stop)
+    ledOnA = (lane != 'A');
+    ledOnB = (lane != 'B');
+    applyDirectLeds();
+    return;
+  }
   if (phase == PH_CLEAR) {      // already changing: send the change to the emergency lane
     targetLane = lane;
     lastReason = "EMERGENCY";
@@ -474,7 +506,8 @@ void sendTelemetry(unsigned long now) {
   Serial.print(F("\",\"ph\":\""));   Serial.print(phase == PH_GREEN ? F("GREEN") : F("CLEAR"));
   Serial.print(F("\",\"pt\":"));     Serial.print(now - phaseStart);
   Serial.print(F(",\"mode\":\""));
-  if (emgLane)                          Serial.print(F("EMERGENCY"));
+  if (direct)                           Serial.print(F("DIRECT"));
+  else if (emgLane)                     Serial.print(F("EMERGENCY"));
   else if (laneA.fault || laneB.fault)  Serial.print(F("DEGRADED"));
   else                                  Serial.print(F("AUTO"));
   Serial.print(F("\",\"why\":\""));  Serial.print(lastReason);
@@ -485,6 +518,8 @@ void sendTelemetry(unsigned long now) {
     emgLeft = (used >= EMG_TIMEOUT_MS) ? 0 : (long)(EMG_TIMEOUT_MS - used);
   }
   Serial.print(F("\",\"emgLeft\":")); Serial.print(emgLeft);
+  Serial.print(F(",\"la\":")); Serial.print(ledOnA ? 1 : 0);
+  Serial.print(F(",\"lb\":")); Serial.print(ledOnB ? 1 : 0);
   printLane(F("a"), laneA, now);
   printLane(F("b"), laneB, now);
   Serial.println('}');
@@ -502,7 +537,7 @@ void handleCmd(char* c) {
   } else if (strcmp(c, "CAL") == 0) {
     ack(F("CAL"));
     calibrate();
-    setLights(phase == PH_GREEN ? greenLane : 'X');
+    restoreLights();
   } else if (strcmp(c, "E:A") == 0) {
     ack(F("E:A"));
     startEmergency('A', now);
@@ -512,6 +547,13 @@ void handleCmd(char* c) {
   } else if (strcmp(c, "E:OFF") == 0) {
     ack(F("E:OFF"));
     endEmergency("MANUAL");
+  } else if (c[0] == 'L' && c[1] == ':' && (c[2] == '0' || c[2] == '1')
+             && (c[3] == '0' || c[3] == '1') && c[4] == 0) {
+    direct = true;
+    ledOnA = (c[2] == '1');
+    ledOnB = (c[3] == '1');
+    applyDirectLeds();
+    ack(F("L"));
   } else if (strncmp(c, "CAR:", 4) == 0) {
     long v = atol(c + 4);
     if (v >= 10 && v <= 500) {
@@ -563,7 +605,7 @@ void setup() {
 
   delay(300);
   bool calibrated = loadSettings();
-  if (!tofReady) emitErr(F("TOF_INIT_FAILED"));
+  if (!tofReady && !direct) emitErr(F("TOF_INIT_FAILED"));
   // If not calibrated yet, both lanes show no queue until CAL is sent.
   emitConfig(F("BOOT"), calibrated ? "EEPROM" : "NONE");
 
@@ -572,8 +614,12 @@ void setup() {
   targetLane = 'A';
   phaseStart = millis();
   lastReason = "BOOT";
-  setLights('A');
-  evtStart(F("GREEN")); kvChar(F("lane"), 'A'); kvStr(F("why"), "BOOT"); evtEnd();
+  if (direct) {
+    applyDirectLeds();
+  } else {
+    setLights('A');
+    evtStart(F("GREEN")); kvChar(F("lane"), 'A'); kvStr(F("why"), "BOOT"); evtEnd();
+  }
 }
 
 void loop() {
@@ -581,12 +627,16 @@ void loop() {
   unsigned long now = millis();
   if (now - lastSample >= SAMPLE_MS) {
     lastSample = now;
-    updateLane(laneA, readUltrasonic());
-    updateLane(laneB, readTof());
-    now = millis();
-    computePressure(laneA, now);
-    computePressure(laneB, now);
-    decide(now);
+    if (direct) {
+      if (emgLane && now - emgStart >= EMG_TIMEOUT_MS) endEmergency("TIMEOUT");
+    } else {
+      updateLane(laneA, readUltrasonic());
+      updateLane(laneB, readTof());
+      now = millis();
+      computePressure(laneA, now);
+      computePressure(laneB, now);
+      decide(now);
+    }
     sendTelemetry(now);
   }
 }

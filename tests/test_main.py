@@ -101,3 +101,62 @@ def test_event_before_boot_does_not_crash():
     link._on_message(err)
     store.flush()
     assert store.session_id is None
+
+
+def direct_tel(ms, la, lb):
+    return {"type": "tel", "ms": ms, "g": "A", "next": "-", "ph": "GREEN", "pt": 0, "mode": "DIRECT",
+            "why": "BOOT", "emg": "-", "emgLeft": 0, "la": la, "lb": lb,
+            "a": {"raw": -1, "d": -1, "q": -1, "n": -1, "line": 0, "w": 0, "p": 0.0, "ok": 1},
+            "b": {"raw": -1, "d": -1, "q": -1, "n": -1, "line": 0, "w": 0, "p": 0.0, "ok": 1}}
+
+
+def test_direct_mode_telemetry_is_replaced_by_simulated_view_of_real_leds():
+    app, link, store = make_app()
+    link._on_message({"type": "evt", "ms": 1, "ev": "BOOT", "lineA": 0, "lineB": 0, "carMm": 70, "direct": 1})
+    link._on_message(direct_tel(100, 0, 1))
+    body = TestClient(app).get("/api/status").json()
+    assert body["telemetry"]["sim"] is True
+    assert body["telemetry"]["g"] == "A"
+    assert (body["telemetry"]["la"], body["telemetry"]["lb"]) == (0, 1)
+    assert body["config"]["lineA"] > 0
+
+
+def test_direct_mode_led_change_logs_switch_events():
+    app, link, store = make_app()
+    link._on_message({"type": "evt", "ms": 1, "ev": "BOOT", "lineA": 0, "lineB": 0, "carMm": 70, "direct": 1})
+    link._on_message(direct_tel(100, 0, 1))
+    link._on_message(direct_tel(200, 1, 0))
+    store.flush()
+    evs = [r[0] for r in store.conn.execute("SELECT ev FROM events ORDER BY id")]
+    assert evs == ["BOOT", "SWITCH", "GREEN"]
+
+
+def test_non_direct_telemetry_passes_through_unchanged():
+    app, link, store = make_app()
+    tel = direct_tel(100, 1, 1)
+    tel["mode"] = "AUTO"
+    link._on_message(tel)
+    body = TestClient(app).get("/api/status").json()
+    assert "sim" not in body["telemetry"]
+
+
+def test_board_reset_restores_last_reported_led_state():
+    import time
+    app, link, store = make_app()
+    boot = {"type": "evt", "ms": 1, "ev": "BOOT", "lineA": 0, "lineB": 0, "carMm": 70, "direct": 1}
+    link._on_message(boot)
+    assert link.sent == []  # nothing reported yet, nothing to restore
+    link._on_message(direct_tel(100, 0, 1))
+    link._on_message(dict(boot))
+    for _ in range(100):
+        if link.sent:
+            break
+        time.sleep(0.01)
+    assert link.sent == ["L:01"]
+
+
+def test_remote_page_is_served():
+    app, link, store = make_app()
+    r = TestClient(app).get("/remote")
+    assert r.status_code == 200
+    assert "text/html" in r.headers["content-type"]

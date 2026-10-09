@@ -130,3 +130,36 @@ def test_send_command_car_with_value_matches_firmwares_bare_car_ack():
 
     assert result_holder["result"]["ok"] is True
     assert link._ser.written == [b"CAR:120\n"]
+
+
+def test_send_command_led_matches_firmwares_bare_l_ack():
+    link = SerialLink(on_message=lambda obj: None)
+    link.connected = True
+    link.boot_at = time.time()
+    link._ser = FakeSerial()
+
+    result_holder = {}
+
+    def sender():
+        result_holder["result"] = link.send_command("L:10", timeout=2.0)
+
+    t = threading.Thread(target=sender)
+    t.start()
+    time.sleep(0.1)
+    link._handle_line('{"type":"ack","ms":1,"cmd":"L"}')
+    t.join(timeout=3.0)
+
+    assert result_holder["result"]["ok"] is True
+    assert link._ser.written == [b"L:10\n"]
+
+
+def test_find_port_accepts_common_clone_usb_chips(monkeypatch):
+    import serial_link
+
+    class Port:
+        def __init__(self, vid, device):
+            self.vid, self.device = vid, device
+
+    for vid in (0x1A86, 0x10C4, 0x0403):
+        monkeypatch.setattr(serial_link.list_ports, "comports", lambda vid=vid: [Port(None, "COM1"), Port(vid, "COM7")])
+        assert find_port() == "COM7"

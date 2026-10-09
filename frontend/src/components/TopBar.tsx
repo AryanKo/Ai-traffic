@@ -7,9 +7,10 @@ function linkLabel(link: LinkStatus | null, isStale: boolean): string {
   return `Connected ${link.port ?? ""}`.trim();
 }
 
-export function TopBar({ link, mode, deviceMs, isStale }: {
+export function TopBar({ link, mode, sim, deviceMs, isStale }: {
   link: LinkStatus | null;
   mode: string | null;
+  sim: boolean;
   deviceMs: number | null;
   isStale: boolean;
 }) {
@@ -29,7 +30,14 @@ export function TopBar({ link, mode, deviceMs, isStale }: {
         <span>
           {link && link.last_packet_age !== null ? `last ${link.last_packet_age.toFixed(1)}s ago` : "—"}
         </span>
-        <span className="rounded px-2 py-1 bg-panel border border-border">{mode ?? "—"}</span>
+        {sim ? (
+          // The one place the dashboard states how it is being driven right now.
+          <span className="rounded-md border border-clear bg-clear/20 px-3 py-1 font-sans font-semibold text-clear">
+            Manually controlled LEDs · sensors offline · traffic shown is a simulation
+          </span>
+        ) : (
+          <span className="rounded px-2 py-1 bg-panel border border-border">{mode ?? "—"}</span>
+        )}
         <span>{deviceMs !== null ? `up ${(deviceMs / 1000).toFixed(0)}s` : "—"}</span>
       </div>
     </header>

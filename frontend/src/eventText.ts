@@ -1,17 +1,23 @@
 import type { EventMsg } from "./types";
 
+const EMG_OFF_TEXT: Record<string, string> = {
+  MANUAL: "cancelled from the dashboard",
+  TIMEOUT: "timed out",
+};
+
 export function describeEvent(ev: EventMsg): string {
   switch (ev.ev) {
     case "SWITCH": {
       const secs = (ev.greenMs as number) / 1000;
-      return `Switched ${ev.from} to ${ev.to} after ${secs.toFixed(1)} s: ${ev.why} (A ${(ev.pA as number).toFixed(1)}, B ${(ev.pB as number).toFixed(1)})`;
+      const to = ev.to === "X" ? "all red" : ev.to;
+      return `Switched ${ev.from} to ${to} after ${secs.toFixed(1)} s: ${ev.why} (A ${(ev.pA as number).toFixed(1)}, B ${(ev.pB as number).toFixed(1)})`;
     }
     case "GREEN":
       return `Lane ${ev.lane} got green: ${ev.why}`;
     case "EMG_ON":
       return `Emergency priority requested for lane ${ev.lane}`;
     case "EMG_OFF":
-      return `Emergency priority ended for lane ${ev.lane} (${ev.why})`;
+      return `Emergency priority ended for lane ${ev.lane} (${EMG_OFF_TEXT[ev.why as string] ?? ev.why})`;
     case "FAULT":
       return `Lane ${ev.lane} sensor fault`;
     case "RECOVER":

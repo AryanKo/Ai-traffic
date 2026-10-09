@@ -12,14 +12,18 @@ export interface LaneTelemetry {
 export interface Telemetry {
   type: "tel";
   ms: number;
-  g: "A" | "B" | "X";
+  g: "A" | "B" | "X" | "AB";
   next: "A" | "B" | "-";
   ph: "GREEN" | "CLEAR";
   pt: number;
-  mode: "AUTO" | "EMERGENCY" | "DEGRADED";
+  mode: "AUTO" | "EMERGENCY" | "DEGRADED" | "SIM";
   why: "BOOT" | "GAP_OUT" | "PRESSURE" | "MAX_GREEN" | "EMERGENCY";
   emg: "A" | "B" | "-";
   emgLeft: number;
+  /** Present when the LEDs are driven directly and lanes are simulated around them. */
+  sim?: boolean;
+  la?: 0 | 1;
+  lb?: 0 | 1;
   a: LaneTelemetry;
   b: LaneTelemetry;
 }

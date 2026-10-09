@@ -37,7 +37,9 @@ def compute_stats(conn: sqlite3.Connection, session_id: int) -> dict:
         lane = d["lane"]
         col = "a_w" if lane == "A" else "b_w"
         row = conn.execute(
-            f"SELECT {col} FROM telemetry WHERE session_id=? AND host_ts < ? ORDER BY host_ts DESC LIMIT 1",
+            # <= because time.time() is ~15.6 ms coarse on Windows: telemetry read just
+            # before the GREEN event can share its host_ts.
+            f"SELECT {col} FROM telemetry WHERE session_id=? AND host_ts <= ? ORDER BY host_ts DESC, id DESC LIMIT 1",
             (session_id, ts),
         ).fetchone()
         if row and row[0] is not None:

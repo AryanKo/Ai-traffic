@@ -78,3 +78,13 @@ def test_rejects_unknown_or_near_miss_commands():
     assert not is_allowed_command("E:C")
     assert not is_allowed_command("PING; rm -rf")
     assert not is_allowed_command("")
+
+
+def test_allows_led_commands():
+    for cmd in ("L:00", "L:01", "L:10", "L:11"):
+        assert is_allowed_command(cmd)
+
+
+def test_rejects_malformed_led_commands():
+    for cmd in ("L:2", "L:1", "L:111", "L:12", "L:", "l:10", "L:10\nCAL"):
+        assert not is_allowed_command(cmd)

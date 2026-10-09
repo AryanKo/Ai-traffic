@@ -22,7 +22,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-bg text-[#E6E9EE]">
-      <TopBar link={link} mode={telemetry?.mode ?? null} deviceMs={telemetry?.ms ?? null} isStale={isStale} />
+      <TopBar link={link} mode={telemetry?.mode ?? null} sim={telemetry?.sim === true} deviceMs={telemetry?.ms ?? null} isStale={isStale} />
       <main className="grid grid-cols-[2fr_1fr] gap-4 p-6">
         <div className="space-y-4">
           <section className={`rounded-2xl border border-border bg-panel p-4 ${isStale ? "opacity-50" : ""}`} style={{ height: 420 }}>

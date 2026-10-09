@@ -46,4 +46,9 @@ describe("evaluateRules", () => {
     const rules = evaluateRules(tel({ pt: 21000 }), config);
     expect(rules.find((r) => r.id === "max_green")!.pass).toBe(true);
   });
+  it("reports both lanes moving when both have green", () => {
+    const rules = evaluateRules(tel({ g: "AB" }), config);
+    expect(rules).toHaveLength(1);
+    expect(rules[0].id).toBe("both_go");
+  });
 });
